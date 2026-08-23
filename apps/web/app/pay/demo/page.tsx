@@ -5,12 +5,13 @@ import {
 export default function DemoCheckout() {
   return (
     <PublicCheckoutPage
-      merchantName="SalamaPay"
-      title="Complete Your Payment"
-      description="Fast and secure checkout powered by XPay."
-      amount="50,000"
+      merchantName="Eric Kweyunga"
+      title="Please buy me a coffee"
+      description="Open source is about sharing knowledge and empowering developers everywhere. I maintain and build public projects, libraries, and tools for developers to learn, use, and contribute to. Your support helps me continue creating open tools, writing documentation, and experimenting with new ideas in public."
+      amount="TSh 1,000"
       currency="TZS"
-      brandColor="#10b981"
+      brandColor="#dc2626"
+      link="https://github.com/erickweyunga"
     />
   )
 }

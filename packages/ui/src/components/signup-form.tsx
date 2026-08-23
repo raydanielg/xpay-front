@@ -206,7 +206,7 @@ export function SignupForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+          className="w-full h-10 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-1.5">
@@ -231,7 +231,7 @@ export function SignupForm({
         <button
           type="button"
           onClick={() => toast.add({ type: "info", title: "Redirecting...", description: "Taking you to Google sign-up." })}
-          className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 text-sm font-medium transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
+          className="w-full h-10 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 text-sm font-medium transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
         >
           <svg className="size-4" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

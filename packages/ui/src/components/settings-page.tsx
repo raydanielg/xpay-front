@@ -17,7 +17,6 @@ import {
   PlusSignIcon,
   Alert02Icon,
   SmartPhone01Icon,
-  CreditCardIcon,
   BankIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@workspace/ui/components/button"
@@ -113,8 +112,6 @@ export function SettingsPage({ defaultTab = "api-keys" }: { defaultTab?: Setting
     airtel: true,
     tigo: true,
     halopesa: true,
-    visa: true,
-    mastercard: true,
     crdb: true,
     nmb: true,
   })
@@ -545,25 +542,6 @@ export function SettingsPage({ defaultTab = "api-keys" }: { defaultTab?: Setting
               />
             </div>
 
-            {/* Visa & Mastercard */}
-            <div className="flex items-center justify-between rounded-xl bg-muted/20 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                  <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} className="size-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-foreground">Visa & Mastercard</div>
-                  <div className="text-[0.6875rem] text-muted-foreground">3D Secure debit & credit cards</div>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={methods.visa}
-                onChange={(e) => setMethods({ ...methods, visa: e.target.checked, mastercard: e.target.checked })}
-                className="size-4 rounded accent-primary cursor-pointer"
-              />
-            </div>
-
             {/* Bank Transfer */}
             <div className="flex items-center justify-between rounded-xl bg-muted/20 p-4">
               <div className="flex items-center gap-3">
@@ -645,17 +623,11 @@ export function SettingsPage({ defaultTab = "api-keys" }: { defaultTab?: Setting
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-muted/20 p-4 space-y-1">
               <div className="text-xs text-muted-foreground">Mobile Money (TZS)</div>
               <div className="text-2xl font-bold text-foreground">2.0%</div>
               <div className="text-[0.6875rem] text-muted-foreground">Per successful transaction</div>
-            </div>
-
-            <div className="rounded-xl bg-muted/20 p-4 space-y-1">
-              <div className="text-xs text-muted-foreground">Cards (Visa / Master)</div>
-              <div className="text-2xl font-bold text-foreground">2.5%</div>
-              <div className="text-[0.6875rem] text-muted-foreground">Local & international cards</div>
             </div>
 
             <div className="rounded-xl bg-muted/20 p-4 space-y-1">

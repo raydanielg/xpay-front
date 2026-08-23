@@ -44,19 +44,38 @@ export function NavMain({
 }: {
   sections: NavSection[]
 }) {
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    sections.forEach((section, i) => {
+      const hasActiveItem = section.items.some(
+        (item) =>
+          item.isActive ||
+          (item.subItems?.some((sub) => sub.isActive) ?? false)
+      )
+      initial[section.label] = i === 0 || hasActiveItem
+    })
+    return initial
+  })
+
+  const [openItems, setOpenItems] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    sections.forEach((section) => {
+      section.items.forEach((item) => {
+        if (item.isActive) initial[item.title] = true
+      })
+    })
+    return initial
+  })
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-1">
-        {sections.map((section, sectionIndex) => {
-          const hasActiveItem = section.items.some(
-            (item) =>
-              item.isActive ||
-              (item.subItems?.some((sub) => sub.isActive) ?? false)
-          )
+        {sections.map((section) => {
           return (
             <Collapsible
               key={section.label}
-              defaultOpen={sectionIndex === 0 || hasActiveItem}
+              open={openSections[section.label] ?? false}
+              onOpenChange={(open) => setOpenSections((prev) => ({ ...prev, [section.label]: open }))}
               className="group/section border-b border-sidebar-border/60 last:border-0"
             >
               {/* Section Header - Clickable */}
@@ -81,7 +100,8 @@ export function NavMain({
                       return (
                         <Collapsible
                           key={item.title}
-                          defaultOpen={item.isActive}
+                          open={openItems[item.title] ?? false}
+                          onOpenChange={(open) => setOpenItems((prev) => ({ ...prev, [item.title]: open }))}
                           className="group/collapsible"
                         >
                           <SidebarMenuItem>

@@ -8,7 +8,9 @@ import {
   PlusSignIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowUpRight01Icon,
   CheckmarkCircle01Icon,
+  Tick02Icon,
   Clock01Icon,
   CancelCircleIcon,
   Calendar03Icon,
@@ -33,329 +35,11 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import { toast } from "@workspace/ui/components/toast"
-
-interface PaymentLinkRecord {
-  id: string
-  reference: string
-  fullReference: string
-  merchantProfile: string
-  amount: string
-  customer: string
-  status: "unpaid" | "completed" | "expired"
-  paymentMethods?: string
-  description?: string
-  createdAt: string
-  expiresAt?: string
-  customerEmail?: string
-  metadata?: {
-    paymentId?: string
-    planId?: string
-    restaurantId?: string
-  }
-}
-
-const mockPaymentRecords: PaymentLinkRecord[] = [
-  {
-    id: "1",
-    reference: "PAY178545611...",
-    fullReference: "PAY17854561181590356",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 1,000",
-    customer: "-",
-    customerEmail: "airezra2@gmail.com",
-    status: "unpaid",
-    paymentMethods: "mobile money",
-    description: "Subscription: Basic",
-    createdAt: "31 Jul 2026, 03:01",
-    expiresAt: "31 Jul 2026, 04:01",
-    metadata: { paymentId: "5", planId: "2", restaurantId: "1" },
-  },
-  {
-    id: "2",
-    reference: "PAY177660605...",
-    fullReference: "PAY17766060589123490",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 50,000",
-    customer: "-",
-    customerEmail: "sarah.wilson@example.com",
-    status: "unpaid",
-    paymentMethods: "mobile money, card",
-    description: "Annual Subscription: Pro",
-    createdAt: "19 Apr 2026, 16:40",
-    expiresAt: "19 Apr 2026, 17:40",
-    metadata: { paymentId: "12", planId: "4", restaurantId: "1" },
-  },
-  {
-    id: "3",
-    reference: "PAY177341881...",
-    fullReference: "PAY17734188190283411",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 1,000",
-    customer: "-",
-    customerEmail: "guest@xpay.com",
-    status: "unpaid",
-    paymentMethods: "mobile money",
-    description: "Quick payment invoice",
-    createdAt: "13 Mar 2026, 19:20",
-    expiresAt: "13 Mar 2026, 20:20",
-    metadata: { paymentId: "15", planId: "1", restaurantId: "2" },
-  },
-  {
-    id: "4",
-    reference: "PAY177338727...",
-    fullReference: "PAY17733872783948190",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 2,000",
-    customer: "Euphemia Vitus Joseph",
-    customerEmail: "euphemia.v@gmail.com",
-    status: "completed",
-    paymentMethods: "mobile money",
-    description: "Restaurant Table Order #42",
-    createdAt: "13 Mar 2026, 10:34",
-    expiresAt: "13 Mar 2026, 11:34",
-    metadata: { paymentId: "21", planId: "2", restaurantId: "3" },
-  },
-  {
-    id: "5",
-    reference: "PAY177322187...",
-    fullReference: "PAY17732218712398455",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 10,000",
-    customer: "-",
-    customerEmail: "customer@example.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "Lunch Special Voucher",
-    createdAt: "11 Mar 2026, 12:37",
-    expiresAt: "11 Mar 2026, 13:37",
-    metadata: { paymentId: "32", planId: "1", restaurantId: "1" },
-  },
-  {
-    id: "6",
-    reference: "PAY177322116...",
-    fullReference: "PAY17732211698234100",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 100,000",
-    customer: "-",
-    customerEmail: "customer@example.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "Catering Deposit",
-    createdAt: "11 Mar 2026, 12:26",
-    expiresAt: "11 Mar 2026, 13:26",
-    metadata: { paymentId: "33", planId: "3", restaurantId: "1" },
-  },
-  {
-    id: "7",
-    reference: "PAY177322058...",
-    fullReference: "PAY17732205845612399",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 200,000",
-    customer: "-",
-    customerEmail: "finance@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money, card",
-    description: "Bulk Reservation",
-    createdAt: "11 Mar 2026, 12:16",
-    expiresAt: "11 Mar 2026, 13:16",
-    metadata: { paymentId: "34", planId: "5", restaurantId: "2" },
-  },
-  {
-    id: "8",
-    reference: "PAY177322058...",
-    fullReference: "PAY17732205898765412",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 500,000",
-    customer: "-",
-    customerEmail: "client@corporate.tz",
-    status: "unpaid",
-    paymentMethods: "mobile money, bank",
-    description: "Corporate Dinner Package",
-    createdAt: "11 Mar 2026, 12:16",
-    expiresAt: "11 Mar 2026, 13:16",
-    metadata: { paymentId: "35", planId: "6", restaurantId: "1" },
-  },
-  {
-    id: "9",
-    reference: "PAY177321963...",
-    fullReference: "PAY17732196323456788",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 100,000",
-    customer: "-",
-    customerEmail: "support@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "Event Ticket Deposit",
-    createdAt: "11 Mar 2026, 12:00",
-    expiresAt: "11 Mar 2026, 13:00",
-    metadata: { paymentId: "36", planId: "2", restaurantId: "1" },
-  },
-  {
-    id: "10",
-    reference: "PAY177321920...",
-    fullReference: "PAY17732192087654321",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 100,000",
-    customer: "-",
-    customerEmail: "info@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "VIP Section Access",
-    createdAt: "11 Mar 2026, 11:53",
-    expiresAt: "11 Mar 2026, 12:53",
-    metadata: { paymentId: "37", planId: "2", restaurantId: "1" },
-  },
-  {
-    id: "11",
-    reference: "PAY177321891...",
-    fullReference: "PAY17732189112345678",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 500,000",
-    customer: "-",
-    customerEmail: "orders@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money, bank",
-    description: "Monthly Service Fee",
-    createdAt: "11 Mar 2026, 11:48",
-    expiresAt: "11 Mar 2026, 12:48",
-    metadata: { paymentId: "38", planId: "6", restaurantId: "2" },
-  },
-  {
-    id: "12",
-    reference: "PAY177321791...",
-    fullReference: "PAY17732179165432100",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 500,000",
-    customer: "-",
-    customerEmail: "sales@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "Software License Fee",
-    createdAt: "11 Mar 2026, 11:31",
-    expiresAt: "11 Mar 2026, 12:31",
-    metadata: { paymentId: "39", planId: "6", restaurantId: "1" },
-  },
-  {
-    id: "13",
-    reference: "PAY177321723...",
-    fullReference: "PAY17732172378901234",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 100,000",
-    customer: "Geofrey peleus",
-    customerEmail: "geofrey.p@outlook.com",
-    status: "completed",
-    paymentMethods: "mobile money",
-    description: "Consulting Hour",
-    createdAt: "11 Mar 2026, 11:20",
-    expiresAt: "11 Mar 2026, 12:20",
-    metadata: { paymentId: "40", planId: "3", restaurantId: "3" },
-  },
-  {
-    id: "14",
-    reference: "PAY177321700...",
-    fullReference: "PAY17732170034567890",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 50,000",
-    customer: "-",
-    customerEmail: "guest@xpay.com",
-    status: "expired",
-    paymentMethods: "mobile money",
-    description: "Menu Bundle Special",
-    createdAt: "11 Mar 2026, 11:16",
-    expiresAt: "11 Mar 2026, 12:16",
-    metadata: { paymentId: "41", planId: "2", restaurantId: "1" },
-  },
-  {
-    id: "15",
-    reference: "PAY177321680...",
-    fullReference: "PAY17732168090123456",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 150,000",
-    customer: "-",
-    customerEmail: "inquiries@xpay.com",
-    status: "unpaid",
-    paymentMethods: "mobile money",
-    description: "Beverage Package",
-    createdAt: "11 Mar 2026, 11:13",
-    expiresAt: "11 Mar 2026, 12:13",
-    metadata: { paymentId: "42", planId: "4", restaurantId: "2" },
-  },
-  {
-    id: "16",
-    reference: "PAY177321675...",
-    fullReference: "PAY17732167556789012",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 50,000",
-    customer: "-",
-    customerEmail: "billing@xpay.com",
-    status: "unpaid",
-    paymentMethods: "mobile money",
-    description: "Delivery fee deposit",
-    createdAt: "11 Mar 2026, 11:12",
-    expiresAt: "11 Mar 2026, 12:12",
-    metadata: { paymentId: "43", planId: "2", restaurantId: "1" },
-  },
-  {
-    id: "17",
-    reference: "PAY177321663...",
-    fullReference: "PAY17732166312378900",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 300,000",
-    customer: "Mark Bwemo",
-    customerEmail: "mark.bwemo@gmail.com",
-    status: "completed",
-    paymentMethods: "mobile money, card",
-    description: "Private Dining Reservation",
-    createdAt: "11 Mar 2026, 11:10",
-    expiresAt: "11 Mar 2026, 12:10",
-    metadata: { paymentId: "44", planId: "5", restaurantId: "1" },
-  },
-  {
-    id: "18",
-    reference: "PAY177321172...",
-    fullReference: "PAY17732117289012345",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 1,000",
-    customer: "Joas Maugo",
-    customerEmail: "joas.m@yahoo.com",
-    status: "completed",
-    paymentMethods: "mobile money",
-    description: "Coffee & Pastry",
-    createdAt: "11 Mar 2026, 09:48",
-    expiresAt: "11 Mar 2026, 10:48",
-    metadata: { paymentId: "45", planId: "1", restaurantId: "1" },
-  },
-  {
-    id: "19",
-    reference: "PAY177321127...",
-    fullReference: "PAY17732112745678901",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 1,000",
-    customer: "Joseph Gembe Msuya",
-    customerEmail: "gembe.m@gmail.com",
-    status: "completed",
-    paymentMethods: "mobile money",
-    description: "Quick snack order",
-    createdAt: "11 Mar 2026, 09:41",
-    expiresAt: "11 Mar 2026, 10:41",
-    metadata: { paymentId: "46", planId: "1", restaurantId: "1" },
-  },
-  {
-    id: "20",
-    reference: "PAY177321050...",
-    fullReference: "PAY17732105012345678",
-    merchantProfile: "SalamaPay",
-    amount: "TSh 1,000",
-    customer: "Air Ezra",
-    customerEmail: "airezra2@gmail.com",
-    status: "completed",
-    paymentMethods: "mobile money",
-    description: "Subscription: Basic",
-    createdAt: "11 Mar 2026, 09:28",
-    expiresAt: "11 Mar 2026, 10:28",
-    metadata: { paymentId: "5", planId: "2", restaurantId: "1" },
-  },
-]
+import {
+  type PaymentLinkRecord,
+  mockPaymentRecords,
+  profileSlug,
+} from "../data/mock-payment-links"
 
 const statusOptions = [
   { label: "All statuses", value: "ALL" },
@@ -402,6 +86,22 @@ export function PaymentLinksPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [autoRefreshInterval, setAutoRefreshInterval] = React.useState<number>(15) // seconds, 0 = off
   const [dateRange, setDateRange] = React.useState<{ from: Date | undefined; to?: Date | undefined } | undefined>(undefined)
+  const [copiedKey, setCopiedKey] = React.useState<string | null>(null)
+  const [origin, setOrigin] = React.useState("")
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin)
+    }
+  }, [])
+
+  const getPaymentUrl = React.useCallback(
+    (profile: string) => {
+      const base = origin || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
+      return `${base}/pay/${profileSlug(profile)}`
+    },
+    [origin]
+  )
 
   // Drawer form fields
   const [merchantProfile, setMerchantProfile] = React.useState("Default")
@@ -474,12 +174,40 @@ export function PaymentLinksPage() {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
-  function copyRef(ref: string) {
+  function copyRef(ref: string, key?: string) {
+    const targetKey = key || ref
     navigator.clipboard.writeText(ref)
+    setCopiedKey(targetKey)
+    setTimeout(() => {
+      setCopiedKey((curr) => (curr === targetKey ? null : curr))
+    }, 2000)
     toast.add({
       type: "success",
       title: "Copied Reference",
       description: `${ref} copied to clipboard.`,
+    })
+  }
+
+  function copyCheckoutLink(url: string, key: string) {
+    navigator.clipboard.writeText(url)
+    setCopiedKey(key)
+    setTimeout(() => {
+      setCopiedKey((curr) => (curr === key ? null : curr))
+    }, 2000)
+    toast.add({
+      type: "success",
+      title: "Link Copied!",
+      description: "Checkout payment link copied to clipboard.",
+    })
+  }
+
+  function previewCheckoutLink(profile: string) {
+    const targetUrl = `/pay/${profileSlug(profile)}`
+    window.open(targetUrl, "_blank", "noopener,noreferrer")
+    toast.add({
+      type: "info",
+      title: "Opening Checkout",
+      description: `Opened ${profile} in a new tab.`,
     })
   }
 
@@ -748,10 +476,18 @@ export function PaymentLinksPage() {
                             e.stopPropagation()
                             copyRef(item.fullReference)
                           }}
-                          className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-primary cursor-pointer"
-                          title="Copy reference"
+                          className={`transition-opacity cursor-pointer ${
+                            copiedKey === item.fullReference
+                              ? "opacity-100 text-emerald-600 dark:text-emerald-400"
+                              : "opacity-0 group-hover:opacity-100 hover:text-primary text-muted-foreground"
+                          }`}
+                          title={copiedKey === item.fullReference ? "Copied!" : "Copy reference"}
                         >
-                          <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} className="size-3" />
+                          <HugeiconsIcon
+                            icon={copiedKey === item.fullReference ? Tick02Icon : Copy01Icon}
+                            strokeWidth={2}
+                            className="size-3"
+                          />
                         </button>
                       </div>
                     </td>
@@ -848,36 +584,106 @@ export function PaymentLinksPage() {
           className="w-full sm:max-w-md border-s border-border bg-card p-0 shadow-2xl flex flex-col justify-between"
         >
           {/* Header */}
-          <SheetHeader className="p-6 pb-4 border-b border-border/60 flex flex-row items-center justify-between pr-14">
+          <SheetHeader className="p-6 pb-4 border-b border-border/60 flex flex-row items-center justify-between pr-12">
             <div>
               <SheetTitle className="text-base font-semibold">Payment Link Details</SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground">
                 Overview and transaction metadata
               </SheetDescription>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (selectedRecord) {
-                  navigator.clipboard.writeText(`https://pay.xpay.com/${selectedRecord.fullReference}`)
-                  toast.add({
-                    type: "success",
-                    title: "Link Copied",
-                    description: `Checkout link copied to clipboard.`,
-                  })
-                }
-              }}
-              className="h-8 gap-1.5 text-xs font-medium bg-muted/40 hover:bg-muted cursor-pointer rounded-lg shrink-0"
-            >
-              <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} className="size-3.5" />
-              <span>Copy link</span>
-            </Button>
+            {selectedRecord && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => previewCheckoutLink(selectedRecord.merchantProfile)}
+                  className="h-8 gap-1 text-xs font-medium bg-background hover:bg-muted text-foreground cursor-pointer rounded-lg shrink-0"
+                  title="Open checkout page in new tab"
+                >
+                  <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+                  <span>Preview</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={copiedKey === `header-${selectedRecord.fullReference}` ? "default" : "outline"}
+                  onClick={() =>
+                    copyCheckoutLink(
+                      getPaymentUrl(selectedRecord.merchantProfile),
+                      `header-${selectedRecord.fullReference}`
+                    )
+                  }
+                  className={`h-8 gap-1.5 text-xs font-medium cursor-pointer rounded-lg shrink-0 transition-all ${
+                    copiedKey === `header-${selectedRecord.fullReference}`
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 border-emerald-600"
+                      : "bg-muted/40 hover:bg-muted"
+                  }`}
+                >
+                  <HugeiconsIcon
+                    icon={copiedKey === `header-${selectedRecord.fullReference}` ? Tick02Icon : Copy01Icon}
+                    strokeWidth={2}
+                    className="size-3.5"
+                  />
+                  <span>{copiedKey === `header-${selectedRecord.fullReference}` ? "Copied!" : "Copy link"}</span>
+                </Button>
+              </div>
+            )}
           </SheetHeader>
 
           {/* Body Content */}
           {selectedRecord && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Shareable Checkout Link Box */}
+              <div className="flex flex-col gap-1.5 rounded-xl border border-border/70 bg-gradient-to-br from-muted/30 to-muted/10 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Shareable Checkout Link
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-emerald-600 dark:text-emerald-400">
+                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Link
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-background border border-border/50 px-3 py-2 font-mono text-xs font-medium text-foreground shadow-2xs">
+                  <span className="truncate text-primary">
+                    {getPaymentUrl(selectedRecord.merchantProfile)}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyCheckoutLink(
+                          getPaymentUrl(selectedRecord.merchantProfile),
+                          `body-${selectedRecord.fullReference}`
+                        )
+                      }
+                      className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                        copiedKey === `body-${selectedRecord.fullReference}`
+                          ? "text-emerald-600 bg-emerald-500/10 font-sans font-medium"
+                          : "hover:text-primary text-muted-foreground hover:bg-muted"
+                      }`}
+                      title="Copy link"
+                    >
+                      <HugeiconsIcon
+                        icon={copiedKey === `body-${selectedRecord.fullReference}` ? Tick02Icon : Copy01Icon}
+                        strokeWidth={2}
+                        className="size-3.5"
+                      />
+                      {copiedKey === `body-${selectedRecord.fullReference}` && (
+                        <span>Copied</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => previewCheckoutLink(selectedRecord.merchantProfile)}
+                      className="p-1.5 rounded-md transition-colors hover:text-primary text-muted-foreground hover:bg-muted cursor-pointer"
+                      title="Open in new tab"
+                    >
+                      <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Main Attributes */}
               <div className="space-y-4">
                 {/* Reference */}
@@ -887,11 +693,22 @@ export function PaymentLinksPage() {
                     <span className="truncate">{selectedRecord.fullReference}</span>
                     <button
                       type="button"
-                      onClick={() => copyRef(selectedRecord.fullReference)}
-                      className="hover:text-primary transition-colors cursor-pointer shrink-0"
+                      onClick={() => copyRef(selectedRecord.fullReference, `ref-${selectedRecord.fullReference}`)}
+                      className={`transition-colors cursor-pointer shrink-0 flex items-center gap-1 ${
+                        copiedKey === `ref-${selectedRecord.fullReference}`
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "hover:text-primary text-muted-foreground"
+                      }`}
                       title="Copy full reference"
                     >
-                      <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} className="size-3.5" />
+                      <HugeiconsIcon
+                        icon={copiedKey === `ref-${selectedRecord.fullReference}` ? Tick02Icon : Copy01Icon}
+                        strokeWidth={2}
+                        className="size-3.5"
+                      />
+                      {copiedKey === `ref-${selectedRecord.fullReference}` && (
+                        <span className="text-[0.6875rem] font-sans font-medium">Copied!</span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1012,30 +829,50 @@ export function PaymentLinksPage() {
           )}
 
           {/* Footer */}
-          <SheetFooter className="p-6 pt-4 border-t border-border/60 flex flex-row gap-3">
+          <SheetFooter className="p-6 pt-4 border-t border-border/60 flex flex-row gap-2.5">
             <Button
               type="button"
               variant="outline"
               onClick={() => setSelectedRecord(null)}
-              className="flex-1 h-9 text-xs font-medium cursor-pointer"
+              className="h-9 text-xs font-medium cursor-pointer px-4"
             >
               Close
             </Button>
             <Button
               type="button"
+              variant="outline"
               onClick={() => {
                 if (selectedRecord) {
-                  navigator.clipboard.writeText(`https://pay.xpay.com/${selectedRecord.fullReference}`)
-                  toast.add({
-                    type: "success",
-                    title: "Copied Link",
-                    description: `Checkout link copied to clipboard.`,
-                  })
+                  previewCheckoutLink(selectedRecord.merchantProfile)
                 }
               }}
-              className="flex-1 h-9 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium cursor-pointer"
+              className="flex-1 h-9 gap-1.5 text-xs font-medium cursor-pointer hover:bg-muted"
             >
-              Copy Link
+              <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
+              <span>Preview</span>
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedRecord) {
+                  copyCheckoutLink(
+                    getPaymentUrl(selectedRecord.merchantProfile),
+                    `footer-${selectedRecord.fullReference}`
+                  )
+                }
+              }}
+              className={`flex-1 h-9 gap-1.5 text-xs font-medium cursor-pointer transition-all ${
+                copiedKey === `footer-${selectedRecord?.fullReference}`
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              }`}
+            >
+              <HugeiconsIcon
+                icon={copiedKey === `footer-${selectedRecord?.fullReference}` ? Tick02Icon : Copy01Icon}
+                strokeWidth={2}
+                className="size-3.5"
+              />
+              <span>{copiedKey === `footer-${selectedRecord?.fullReference}` ? "Copied!" : "Copy Link"}</span>
             </Button>
           </SheetFooter>
         </SheetContent>
