@@ -1,9 +1,9 @@
-import { LoginForm } from "@workspace/ui/components/login-form"
+import { OtpForm } from "@workspace/ui/components/otp-form"
 
-export default function Page() {
+export default function VerifyOtpPage() {
   return (
     <main className="flex min-h-svh w-full items-center justify-center bg-gray-50 dark:bg-gray-950 px-4 py-12">
-      <LoginForm />
+      <OtpForm />
     </main>
   )
 }

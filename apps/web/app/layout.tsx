@@ -1,12 +1,26 @@
-import { Geist, Geist_Mono, Source_Sans_3 } from "next/font/google"
+import type { Metadata } from "next"
+import { Geist, Geist_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@workspace/ui/components/toast"
 import { cn } from "@workspace/ui/lib/utils";
 
-const sourceSans3 = Source_Sans_3({subsets:['latin'],variable:'--font-sans'})
+export const metadata: Metadata = {
+  title: "XPay",
+  description: "XPay Platform",
+  icons: {
+    icon: "/pay-per-click.png",
+    apple: "/pay-per-click.png",
+  },
+}
 
-const fontMono = Geist_Mono({
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
+
+const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
@@ -20,10 +34,13 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", sourceSans3.variable)}
+      className={cn("antialiased", geistSans.variable, geistMono.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
