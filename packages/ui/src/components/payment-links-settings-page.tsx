@@ -14,6 +14,7 @@ import {
   Coins01Icon,
   PencilEdit02Icon,
   TrashIcon,
+  WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import {
   Sheet,
@@ -35,9 +36,19 @@ import {
 } from "@workspace/ui/components/dropdown-menu"
 import {
   type MerchantProfile,
-  mockMerchantProfiles,
   profileSlug,
 } from "../data/mock-payment-links"
+import { api } from "@workspace/ui/lib/api"
+
+interface ApiPaymentPage {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  logoUrl: string | null
+  isActive: boolean
+  createdAt: string
+}
 
 const allPaymentMethods = [
   { id: "mobile", label: "Mobile Money", color: "bg-emerald-500" },
@@ -62,12 +73,13 @@ function StatusBadge({ status }: { status: MerchantProfile["status"] }) {
 }
 
 export function PaymentLinksSettingsPage() {
-  const [profiles, setProfiles] = React.useState<MerchantProfile[]>(mockMerchantProfiles)
+  const [profiles, setProfiles] = React.useState<MerchantProfile[]>([])
   const [search, setSearch] = React.useState("")
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [editDrawerOpen, setEditDrawerOpen] = React.useState(false)
   const [editingProfile, setEditingProfile] = React.useState<MerchantProfile | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [loading, setLoading] = React.useState(true)
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null)
   const [origin, setOrigin] = React.useState("")
 
@@ -107,6 +119,41 @@ export function PaymentLinksSettingsPage() {
     if (typeof window !== "undefined") {
       setOrigin(window.location.origin)
     }
+  }, [])
+
+  // Fetch payment pages from API
+  React.useEffect(() => {
+    let cancelled = false
+    async function fetchPages() {
+      setLoading(true)
+      try {
+        const res = await api.get<ApiPaymentPage[]>("/payment-pages")
+        if (!cancelled && res.success && res.data) {
+          const pages = Array.isArray(res.data) ? res.data : []
+          const mapped: MerchantProfile[] = pages.map((page) => ({
+            id: page.id,
+            name: page.name,
+            slug: page.slug,
+            logo: page.logoUrl || "/pay-per-click.png",
+            description: page.description || "",
+            accentColor: "#10b981",
+            paymentMethods: ["Mobile Money"],
+            checkoutUrl: `/pay/${page.slug}`,
+            status: page.isActive ? "active" : "draft",
+            createdAt: new Date(page.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+            totalPayments: 0,
+            totalRevenue: "TSh 0",
+          }))
+          setProfiles(mapped)
+        }
+      } catch {
+        // silent fail
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchPages()
+    return () => { cancelled = true }
   }, [])
 
   const getCheckoutUrl = React.useCallback(
@@ -156,71 +203,110 @@ export function PaymentLinksSettingsPage() {
     )
   }
 
-  function handleEditSave(e: React.FormEvent) {
+  async function handleEditSave(e: React.FormEvent) {
     e.preventDefault()
     if (!editingProfile || !editName.trim()) return
     setIsSubmitting(true)
 
-    setTimeout(() => {
-      setProfiles((prev) =>
-        prev.map((p) =>
-          p.id === editingProfile.id
-            ? {
-                ...p,
-                name: editName.trim(),
-                slug: profileSlug(editName),
-                logo: editLogo || p.logo,
-                description: editDescription.trim() || p.description,
-                paymentMethods: editSelectedMethods.map((id) => allPaymentMethods.find((m) => m.id === id)?.label || id),
-                status: editStatus,
-              }
-            : p
+    try {
+      const res = await api.patch<ApiPaymentPage>(`/payment-pages/${editingProfile.id}`, {
+        name: editName.trim(),
+        description: editDescription.trim() || undefined,
+        logoUrl: editLogo || undefined,
+        isActive: editStatus === "active",
+      })
+
+      if (res.success && res.data) {
+        const page = res.data
+        setProfiles((prev) =>
+          prev.map((p) =>
+            p.id === editingProfile.id
+              ? {
+                  ...p,
+                  name: page.name,
+                  slug: page.slug,
+                  logo: page.logoUrl || p.logo,
+                  description: page.description || p.description,
+                  status: page.isActive ? "active" : "draft",
+                }
+              : p
+          )
         )
-      )
+        setEditDrawerOpen(false)
+        setEditingProfile(null)
+        toast.add({ type: "success", title: "Profile Updated", description: `${editName.trim()} has been updated.` })
+      } else {
+        toast.add({ type: "error", title: "Update failed", description: res.message || "Please try again." })
+      }
+    } catch {
+      toast.add({ type: "error", title: "Network error", description: "Please try again." })
+    } finally {
       setIsSubmitting(false)
-      setEditDrawerOpen(false)
-      setEditingProfile(null)
-      toast.add({ type: "success", title: "Profile Updated", description: `${editName.trim()} has been updated.` })
-    }, 1000)
+    }
   }
 
-  function handleDelete(profile: MerchantProfile) {
-    setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
-    setEditDrawerOpen(false)
-    setEditingProfile(null)
-    toast.add({ type: "success", title: "Profile Deleted", description: `${profile.name} has been removed.` })
+  async function handleDelete(profile: MerchantProfile) {
+    try {
+      const res = await api.delete(`/payment-pages/${profile.id}`)
+      if (res.success) {
+        setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
+        setEditDrawerOpen(false)
+        setEditingProfile(null)
+        toast.add({ type: "success", title: "Profile Deleted", description: `${profile.name} has been removed.` })
+      } else {
+        toast.add({ type: "error", title: "Delete failed", description: res.message || "Please try again." })
+      }
+    } catch {
+      toast.add({ type: "error", title: "Network error", description: "Please try again." })
+    }
   }
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
     setIsSubmitting(true)
 
-    setTimeout(() => {
+    try {
       const slug = profileSlug(name)
-      const newProfile: MerchantProfile = {
-        id: `mp${Date.now()}`,
+      const res = await api.post<ApiPaymentPage>("/payment-pages", {
         name: name.trim(),
         slug,
-        logo: logo || "/pay-per-click.png",
-        description: description.trim() || "New merchant profile",
-        accentColor: "#10b981",
-        paymentMethods: selectedMethods.map((id) => allPaymentMethods.find((m) => m.id === id)?.label || id),
-        checkoutUrl: `/pay/${slug}`,
-        status: "active",
-        createdAt: "Today",
-        totalPayments: 0,
-        totalRevenue: "TSh 0",
+        description: description.trim() || undefined,
+        logoUrl: logo || undefined,
+        isActive: true,
+      })
+
+      if (res.success && res.data) {
+        const page = res.data
+        const newProfile: MerchantProfile = {
+          id: page.id,
+          name: page.name,
+          slug: page.slug,
+          logo: page.logoUrl || "/pay-per-click.png",
+          description: page.description || "",
+          accentColor: "#10b981",
+          paymentMethods: selectedMethods.map((id) => allPaymentMethods.find((m) => m.id === id)?.label || id),
+          checkoutUrl: `/pay/${page.slug}`,
+          status: "active",
+          createdAt: "Today",
+          totalPayments: 0,
+          totalRevenue: "TSh 0",
+        }
+        setProfiles([newProfile, ...profiles])
+        setDrawerOpen(false)
+        setName("")
+        setDescription("")
+        setLogo("")
+        setSelectedMethods(["mobile"])
+        toast.add({ type: "success", title: "Profile Created", description: `${newProfile.name} merchant profile is ready.` })
+      } else {
+        toast.add({ type: "error", title: "Creation failed", description: res.message || "Please try again." })
       }
-      setProfiles([newProfile, ...profiles])
+    } catch {
+      toast.add({ type: "error", title: "Network error", description: "Please try again." })
+    } finally {
       setIsSubmitting(false)
-      setDrawerOpen(false)
-      setName("")
-      setDescription("")
-      setLogo("")
-      setSelectedMethods(["mobile"])
-      toast.add({ type: "success", title: "Profile Created", description: `${newProfile.name} merchant profile is ready.` })
-    }, 1200)
+    }
   }
 
   return (
@@ -253,7 +339,27 @@ export function PaymentLinksSettingsPage() {
 
       {/* Profile Cards Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((profile) => (
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border/60 bg-card p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 animate-pulse rounded-lg bg-muted" />
+                    <div className="space-y-1">
+                      <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+                      <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                  <div className="h-5 w-14 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="h-14 animate-pulse rounded-lg bg-muted/30" />
+                  <div className="h-14 animate-pulse rounded-lg bg-muted/30" />
+                </div>
+              </div>
+            ))
+          : filtered.map((profile) => (
           <div
             key={profile.id}
             onClick={() => openEdit(profile)}
@@ -317,12 +423,25 @@ export function PaymentLinksSettingsPage() {
                 onClick={(e) => { e.stopPropagation(); copyLink(getCheckoutUrl(profile.slug), `card-${profile.id}`) }}
                 className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                   copiedKey === `card-${profile.id}`
-                    ? "text-emerald-600 dark:text-emerald-400"
+                    ? "text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <HugeiconsIcon icon={copiedKey === `card-${profile.id}` ? Tick02Icon : Copy01Icon} strokeWidth={2} className="size-3.5" />
                 {copiedKey === `card-${profile.id}` ? "Copied!" : "Copy link"}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const url = getCheckoutUrl(profile.slug)
+                  const text = `Pay via ${profile.name}: ${url}`
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer")
+                  toast.add({ type: "success", title: "WhatsApp Opened", description: "Share your checkout link via WhatsApp." })
+                }}
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer"
+              >
+                <HugeiconsIcon icon={WhatsappIcon} strokeWidth={2} className="size-3.5" />
+                WhatsApp
               </button>
               <span className="ml-auto text-[0.625rem] text-muted-foreground">{profile.createdAt}</span>
             </div>
@@ -331,7 +450,7 @@ export function PaymentLinksSettingsPage() {
       </div>
 
       {/* Empty State */}
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
           <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-muted/40">
             <HugeiconsIcon icon={Store01Icon} strokeWidth={2} className="size-6 text-muted-foreground" />

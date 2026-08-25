@@ -8,8 +8,9 @@ import {
 } from "@workspace/ui/components/collapsible"
 import {
   SidebarGroup,
-  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -17,157 +18,81 @@ import {
   SidebarMenuSubItem,
 } from "@workspace/ui/components/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-
-export interface SubItem {
-  title: string
-  url: string
-  isActive?: boolean
-}
-
-export interface NavItem {
-  title: string
-  url: string
-  icon?: React.ReactNode
-  isActive?: boolean
-  badge?: string
-  subItems?: SubItem[]
-}
-
-export interface NavSection {
-  label: string
-  items: NavItem[]
-}
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 export function NavMain({
-  sections,
+  items,
 }: {
-  sections: NavSection[]
+  items: {
+    title: string
+    url: string
+    icon: React.ReactNode
+    isActive?: boolean
+    items?: {
+      title: string
+      url: string
+      isActive?: boolean
+    }[]
+  }[]
 }) {
-  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    sections.forEach((section, i) => {
-      const hasActiveItem = section.items.some(
-        (item) =>
-          item.isActive ||
-          (item.subItems?.some((sub) => sub.isActive) ?? false)
-      )
-      initial[section.label] = i === 0 || hasActiveItem
-    })
-    return initial
-  })
+  const [openItems, setOpenItems] = React.useState<Record<string, boolean>>({})
 
-  const [openItems, setOpenItems] = React.useState<Record<string, boolean>>(() => {
+  React.useEffect(() => {
     const initial: Record<string, boolean> = {}
-    sections.forEach((section) => {
-      section.items.forEach((item) => {
-        if (item.isActive) initial[item.title] = true
-      })
+    items.forEach((item) => {
+      if (item.isActive) initial[item.title] = true
     })
-    return initial
-  })
+    setOpenItems(initial)
+  }, [items])
 
   return (
     <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-1">
-        {sections.map((section) => {
-          return (
-            <Collapsible
-              key={section.label}
-              open={openSections[section.label] ?? false}
-              onOpenChange={(open) => setOpenSections((prev) => ({ ...prev, [section.label]: open }))}
-              className="group/section border-b border-sidebar-border/60 last:border-0"
+      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarMenu>
+        {items.map((item) => (
+          <Collapsible
+            key={item.title}
+            open={openItems[item.title] ?? false}
+            onOpenChange={(open) => setOpenItems((prev) => ({ ...prev, [item.title]: open }))}
+            render={<SidebarMenuItem />}
+          >
+            <SidebarMenuButton
+              tooltip={item.title}
+              isActive={item.isActive}
+              render={<a href={item.url} />}
             >
-              {/* Section Header - Clickable */}
-              <CollapsibleTrigger
-                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-xs font-semibold tracking-wide text-foreground/80 transition-colors hover:bg-muted/50 hover:text-foreground cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-              >
-                <span>{section.label}</span>
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  strokeWidth={2}
-                  className="size-3.5 transition-transform duration-200 group-data-[expanded]/section:rotate-180"
-                />
-              </CollapsibleTrigger>
-
-              {/* Section Items */}
-              <CollapsibleContent>
-                <SidebarMenu className="mt-0.5">
-                  {section.items.map((item) => {
-                    const hasSubItems =
-                      item.subItems && item.subItems.length > 0
-                    if (hasSubItems) {
-                      return (
-                        <Collapsible
-                          key={item.title}
-                          open={openItems[item.title] ?? false}
-                          onOpenChange={(open) => setOpenItems((prev) => ({ ...prev, [item.title]: open }))}
-                          className="group/collapsible"
+              {item.icon}
+              <span>{item.title}</span>
+            </SidebarMenuButton>
+            {item.items?.length ? (
+              <>
+                <CollapsibleTrigger
+                  render={
+                    <SidebarMenuAction className="aria-expanded:rotate-90" />
+                  }
+                >
+                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+                  <span className="sr-only">Toggle</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {item.items?.map((subItem) => (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        <SidebarMenuSubButton
+                          isActive={subItem.isActive}
+                          render={<a href={subItem.url} />}
                         >
-                          <SidebarMenuItem>
-                            <CollapsibleTrigger
-                              render={
-                                <SidebarMenuButton
-                                  tooltip={item.title}
-                                  isActive={item.isActive}
-                                />
-                              }
-                            >
-                              {item.icon}
-                              <span>{item.title}</span>
-                              {item.badge && (
-                                <span className="ml-auto text-[0.625rem] font-medium text-muted-foreground">
-                                  {item.badge}
-                                </span>
-                              )}
-                              <HugeiconsIcon
-                                icon={ArrowDown01Icon}
-                                strokeWidth={2}
-                                className="ml-auto size-3.5 text-muted-foreground transition-transform duration-200 group-data-[expanded]/collapsible:rotate-180"
-                              />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <SidebarMenuSub>
-                                {item.subItems!.map((sub) => (
-                                  <SidebarMenuSubItem key={sub.title}>
-                                    <SidebarMenuSubButton
-                                      render={<a href={sub.url} />}
-                                      isActive={sub.isActive}
-                                    >
-                                      <span>{sub.title}</span>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuSubItem>
-                                ))}
-                              </SidebarMenuSub>
-                            </CollapsibleContent>
-                          </SidebarMenuItem>
-                        </Collapsible>
-                      )
-                    }
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          tooltip={item.title}
-                          isActive={item.isActive}
-                          render={<a href={item.url} />}
-                        >
-                          {item.icon}
-                          <span>{item.title}</span>
-                          {item.badge && (
-                            <span className="ml-auto text-[0.625rem] font-medium text-muted-foreground">
-                              {item.badge}
-                            </span>
-                          )}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </CollapsibleContent>
-            </Collapsible>
-          )
-        })}
-      </SidebarGroupContent>
+                          <span>{subItem.title}</span>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </>
+            ) : null}
+          </Collapsible>
+        ))}
+      </SidebarMenu>
     </SidebarGroup>
   )
 }

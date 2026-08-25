@@ -3,11 +3,21 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { toast } from "@workspace/ui/components/toast"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
+import { useOtp } from "@workspace/ui/hooks/use-otp"
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { signup } = useAuth()
+  const { setPendingOtp } = useOtp()
+  const [firstName, setFirstName] = React.useState("")
+  const [lastName, setLastName] = React.useState("")
+  const [email, setEmail] = React.useState("")
+  const [phone, setPhone] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
   const [agreeTerms, setAgreeTerms] = React.useState(false)
@@ -19,10 +29,35 @@ export function SignupForm({
       toast.add({ type: "warning", title: "Please accept the terms", description: "You must agree to the Terms of Service and Privacy Policy." })
       return
     }
+    if (password !== confirmPassword) {
+      toast.add({ type: "error", title: "Passwords don't match", description: "Please make sure both passwords are the same." })
+      return
+    }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1800))
+
+    const result = await signup({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone: phone ? `+255${phone}` : undefined,
+    })
+
     setLoading(false)
-    toast.add({ type: "success", title: "Account created!", description: "Welcome to XPay. Your account has been created successfully." })
+
+    if (result.success) {
+      setPendingOtp({ email, otp: result.otp, purpose: "signup" })
+      toast.add({
+        type: "success",
+        title: "Account created!",
+        description: "A verification code has been sent to your phone via SMS. Please verify to continue.",
+      })
+      setTimeout(() => {
+        window.location.href = "/verify-otp"
+      }, 1200)
+    } else {
+      toast.add({ type: "error", title: "Signup failed", description: result.message })
+    }
   }
 
   return (
@@ -57,6 +92,8 @@ export function SignupForm({
               type="text"
               placeholder="John"
               required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
             />
           </div>
@@ -69,6 +106,8 @@ export function SignupForm({
               type="text"
               placeholder="Doe"
               required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
             />
           </div>
@@ -84,6 +123,8 @@ export function SignupForm({
             type="email"
             placeholder="name@example.com"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
           />
         </div>
@@ -102,6 +143,8 @@ export function SignupForm({
               type="tel"
               placeholder="712 345 678"
               required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="flex-1 bg-transparent px-3.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none"
             />
           </div>
@@ -119,6 +162,8 @@ export function SignupForm({
               placeholder="Min. 8 characters"
               required
               minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
             />
             <button
@@ -156,6 +201,8 @@ export function SignupForm({
               placeholder="Re-enter your password"
               required
               minLength={8}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
             />
             <button
@@ -209,10 +256,12 @@ export function SignupForm({
           className="w-full h-10 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? (
-            <span className="flex items-center justify-center gap-1.5">
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current" />
+            <span className="flex items-center justify-center gap-2">
+              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              Creating account...
             </span>
           ) : (
             "Sign up"

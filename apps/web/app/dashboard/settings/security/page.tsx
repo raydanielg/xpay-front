@@ -5,8 +5,8 @@ import {
   SiteHeader,
 } from "@workspace/ui/components/site-header"
 import {
-  SettingsPage,
-} from "@workspace/ui/components/settings-page"
+  SecuritySettingsPage,
+} from "@workspace/ui/components/security-settings-page"
 import {
   SidebarInset,
   SidebarProvider,
@@ -20,7 +20,7 @@ export default function SecuritySettings() {
         <SidebarInset>
           <SiteHeader />
           <main className="flex flex-1 flex-col">
-            <SettingsPage defaultTab="security" />
+            <SecuritySettingsPage />
           </main>
         </SidebarInset>
       </SidebarProvider>

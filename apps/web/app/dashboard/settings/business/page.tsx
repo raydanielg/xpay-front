@@ -5,8 +5,8 @@ import {
   SiteHeader,
 } from "@workspace/ui/components/site-header"
 import {
-  SettingsPage,
-} from "@workspace/ui/components/settings-page"
+  BusinessOverviewPage,
+} from "@workspace/ui/components/business-overview-page"
 import {
   SidebarInset,
   SidebarProvider,
@@ -20,7 +20,7 @@ export default function BusinessSettings() {
         <SidebarInset>
           <SiteHeader />
           <main className="flex flex-1 flex-col">
-            <SettingsPage defaultTab="business" />
+            <BusinessOverviewPage />
           </main>
         </SidebarInset>
       </SidebarProvider>

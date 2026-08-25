@@ -3,28 +3,59 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { toast } from "@workspace/ui/components/toast"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
+import { useOtp } from "@workspace/ui/hooks/use-otp"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { login } = useAuth()
+  const { setPendingOtp } = useOtp()
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
-  const [trustDevice, setTrustDevice] = React.useState(false)
+  const [trustDevice, setTrustDevice] = React.useState(true)
   const [loading, setLoading] = React.useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1500))
+
+    const result = await login(email, password, trustDevice)
+
     setLoading(false)
-    toast.add({
-      type: "success",
-      title: "Welcome back!",
-      description: "You have been signed in successfully.",
-    })
-    setTimeout(() => {
-      window.location.href = "/dashboard"
-    }, 800)
+
+    if (result.success) {
+      if (result.requiresVerification) {
+        // User needs to verify phone — set OTP context and redirect
+        setPendingOtp({ email, otp: result.otp, purpose: "signup" })
+        toast.add({
+          type: "info",
+          title: "Verification required",
+          description: "A verification code has been sent to your phone via SMS. Please verify to continue.",
+        })
+        setTimeout(() => {
+          window.location.href = "/verify-otp"
+        }, 1200)
+      } else {
+        // Normal login success
+        toast.add({
+          type: "success",
+          title: "Welcome back!",
+          description: "You have been signed in successfully. A login alert has been sent to your phone.",
+        })
+        setTimeout(() => {
+          window.location.href = "/dashboard"
+        }, 800)
+      }
+    } else {
+      toast.add({
+        type: "error",
+        title: "Sign in failed",
+        description: result.message,
+      })
+    }
   }
 
   return (
@@ -58,6 +89,8 @@ export function LoginForm({
             type="email"
             placeholder="name@example.com"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
           />
         </div>
@@ -78,6 +111,8 @@ export function LoginForm({
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200/50 dark:focus:ring-gray-700/50"
             />
             <button
@@ -124,10 +159,12 @@ export function LoginForm({
           className="w-full h-10 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? (
-            <span className="flex items-center justify-center gap-1.5">
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current" />
+            <span className="flex items-center justify-center gap-2">
+              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              Signing in...
             </span>
           ) : (
             "Sign in"

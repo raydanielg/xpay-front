@@ -2,7 +2,8 @@
 
 import * as React from "react"
 
-import { NavMain, type NavSection } from "@workspace/ui/components/nav-main"
+import { NavMain } from "@workspace/ui/components/nav-main"
+import { NavSecondary } from "@workspace/ui/components/nav-secondary"
 import { NavUser } from "@workspace/ui/components/nav-user"
 import {
   Sidebar,
@@ -21,17 +22,18 @@ import {
   MoneyBag01Icon,
   Link02Icon,
   InternetIcon,
-  Key01Icon,
-  WebhookIcon,
   BookOpen01Icon,
-  Store01Icon,
-  ShieldUserIcon,
-  Wallet01Icon,
-  Coins01Icon,
-  LockPasswordIcon,
-  ArrowLeft01Icon,
   Settings02Icon,
+  CustomerSupportIcon,
+  SentIcon,
+  PhoneIcon,
+  UserGroupIcon,
+  ChartBarBigIcon,
+  Exchange01Icon,
+  MegaphoneIcon,
+  CodeIcon,
 } from "@hugeicons/core-free-icons"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
 
 function useCurrentPathname() {
   const [pathname, setPathname] = React.useState<string>("")
@@ -55,148 +57,236 @@ function useCurrentPathname() {
   return pathname
 }
 
-const paymentLinksSections: NavSection[] = [
-  {
-    label: "Payment Links",
-    items: [
-      {
-        title: "Links",
-        url: "/dashboard/payment-links",
-        icon: <HugeiconsIcon icon={Link02Icon} strokeWidth={2} />,
-      },
-    ],
-  },
-  {
-    label: "Settings",
-    items: [
-      {
-        title: "Settings",
-        url: "/dashboard/payment-links/settings",
-        icon: <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} />,
-      },
-    ],
-  },
-]
-
-const data: { user: { name: string; email: string; avatar: string }; sections: NavSection[] } = {
+const data = {
   user: {
     name: "Ezra Daniel",
     email: "ezra@xpay.com",
     avatar: "/pay-per-click.png",
   },
-  sections: [
+  navMain: [
     {
-      label: "Overview",
-      items: [
-        {
-          title: "Dashboard",
-          url: "/dashboard",
-          icon: <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />,
-        },
-        {
-          title: "Analytics",
-          url: "/dashboard/analytics",
-          icon: <HugeiconsIcon icon={ChartHistogramIcon} strokeWidth={2} />,
-        },
-      ],
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: (
+        <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />
+      ),
     },
     {
-      label: "Transactions",
+      title: "Analytics",
+      url: "/dashboard/analytics",
+      icon: (
+        <HugeiconsIcon icon={ChartHistogramIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Transactions",
+      url: "/dashboard/transactions",
+      icon: (
+        <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Payments",
+      url: "/dashboard/payments",
+      icon: (
+        <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Payouts",
+      url: "/dashboard/payouts",
+      icon: (
+        <HugeiconsIcon icon={MoneyBag01Icon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Payment Links",
+      url: "/dashboard/payment-links",
+      icon: (
+        <HugeiconsIcon icon={Link02Icon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Payment Pages",
+      url: "/dashboard/payment-pages",
+      icon: (
+        <HugeiconsIcon icon={InternetIcon} strokeWidth={2} />
+      ),
       items: [
+        {
+          title: "Pages",
+          url: "/dashboard/payment-pages/pages",
+        },
         {
           title: "Payments",
-          url: "/dashboard/payments",
-          icon: <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />,
+          url: "/dashboard/payment-pages/payments",
         },
         {
-          title: "Payouts",
-          url: "/dashboard/payouts",
-          icon: <HugeiconsIcon icon={MoneyBag01Icon} strokeWidth={2} />,
-        },
-      ],
-    },
-    {
-      label: "Selling",
-      items: [
-        {
-          title: "Payment Links",
-          url: "/dashboard/payment-links",
-          icon: <HugeiconsIcon icon={Link02Icon} strokeWidth={2} />,
-          badge: "New",
+          title: "Catalog",
+          url: "/dashboard/payment-pages/catalog",
         },
         {
-          title: "Payment Pages",
-          url: "/dashboard/payment-pages",
-          icon: <HugeiconsIcon icon={InternetIcon} strokeWidth={2} />,
-        },
-      ],
-    },
-    {
-      label: "Developer",
-      items: [
-        {
-          title: "API Keys",
-          url: "/dashboard/api-keys",
-          icon: <HugeiconsIcon icon={Key01Icon} strokeWidth={2} />,
+          title: "Products",
+          url: "/dashboard/payment-pages/products",
         },
         {
-          title: "Webhooks",
-          url: "/dashboard/webhooks",
-          icon: <HugeiconsIcon icon={WebhookIcon} strokeWidth={2} />,
+          title: "Categories",
+          url: "/dashboard/payment-pages/categories",
         },
         {
-          title: "Documentation",
-          url: "/dashboard/docs",
-          icon: <HugeiconsIcon icon={BookOpen01Icon} strokeWidth={2} />,
+          title: "Media Library",
+          url: "/dashboard/payment-pages/media-library",
+        },
+        {
+          title: "Settings",
+          url: "/dashboard/payment-pages/settings",
+        },
+        {
+          title: "Profiles",
+          url: "/dashboard/payment-pages/profiles",
+        },
+        {
+          title: "Storage",
+          url: "/dashboard/payment-pages/storage",
+        },
+        {
+          title: "Records",
+          url: "/dashboard/payment-pages/records",
+        },
+        {
+          title: "Receipts",
+          url: "/dashboard/payment-pages/receipts",
+        },
+        {
+          title: "Content Delivery",
+          url: "/dashboard/payment-pages/content-delivery",
         },
       ],
     },
     {
-      label: "Settings",
+      title: "Marketing",
+      url: "/dashboard/marketing",
+      icon: (
+        <HugeiconsIcon icon={MegaphoneIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Developer",
+      url: "/dashboard/developer",
+      icon: (
+        <HugeiconsIcon icon={CodeIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Settings",
+      url: "/dashboard/settings",
+      icon: (
+        <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} />
+      ),
       items: [
         {
-          title: "Business",
-          url: "/dashboard/settings/business",
-          icon: <HugeiconsIcon icon={Store01Icon} strokeWidth={2} />,
+          title: "Profile",
+          url: "/dashboard/settings/profile",
         },
         {
-          title: "KYC",
-          url: "/dashboard/settings/kyc",
-          icon: <HugeiconsIcon icon={ShieldUserIcon} strokeWidth={2} />,
+          title: "Verification Overview",
+          url: "/dashboard/settings/verification",
         },
         {
-          title: "Payment Methods",
-          url: "/dashboard/settings/payment-methods",
-          icon: <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} />,
+          title: "Identity Verification",
+          url: "/dashboard/settings/identity",
         },
         {
-          title: "Fees",
-          url: "/dashboard/settings/fees",
-          icon: <HugeiconsIcon icon={Coins01Icon} strokeWidth={2} />,
+          title: "Payout",
+          url: "/dashboard/settings/payout",
         },
         {
           title: "Security",
           url: "/dashboard/settings/security",
-          icon: <HugeiconsIcon icon={LockPasswordIcon} strokeWidth={2} />,
+        },
+        {
+          title: "Connected Apps",
+          url: "/dashboard/settings/connected-apps",
+        },
+        {
+          title: "Business Overview",
+          url: "/dashboard/settings/business/overview",
+        },
+        {
+          title: "Business Information",
+          url: "/dashboard/settings/business/information",
+        },
+        {
+          title: "Verification Documents",
+          url: "/dashboard/settings/business/documents",
+        },
+        {
+          title: "General",
+          url: "/dashboard/settings/general",
         },
       ],
+    },
+  ],
+  navAdmin: [
+    {
+      title: "Staff Management",
+      url: "/dashboard/staff",
+      icon: (
+        <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Reports",
+      url: "/dashboard/reports",
+      icon: (
+        <HugeiconsIcon icon={ChartBarBigIcon} strokeWidth={2} />
+      ),
+    },
+  ],
+  navSecondary: [
+    {
+      title: "Documentation",
+      url: "https://docs.xpay.com",
+      icon: (
+        <HugeiconsIcon icon={BookOpen01Icon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Support Ticket",
+      url: "/dashboard/support",
+      icon: (
+        <HugeiconsIcon icon={CustomerSupportIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "+255 613 976 254",
+      url: "tel:+255613976254",
+      icon: (
+        <HugeiconsIcon icon={PhoneIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      title: "Feedback",
+      url: "/dashboard/feedback",
+      icon: (
+        <HugeiconsIcon icon={SentIcon} strokeWidth={2} />
+      ),
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useCurrentPathname()
-  const isPaymentLinksRoute = pathname.startsWith("/dashboard/payment-links")
+  const { user } = useAuth()
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin"
 
-  const sectionsWithActive = React.useMemo(() => {
-    const sourceSections = isPaymentLinksRoute ? paymentLinksSections : data.sections
-    return sourceSections.map((section) => ({
-      ...section,
-      items: section.items.map((item) => {
+  const itemsWithActive = React.useMemo(
+    () =>
+      data.navMain.map((item) => {
         const isActive =
           pathname === item.url ||
           (item.url !== "/dashboard" && pathname.startsWith(item.url))
-        const subItems = item.subItems?.map((sub) => ({
+        const subItems = item.items?.map((sub) => ({
           ...sub,
           isActive: pathname === sub.url,
         }))
@@ -204,39 +294,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         return {
           ...item,
           isActive: isActive || hasActiveSub,
-          subItems,
+          items: subItems,
         }
       }),
-    }))
-  }, [pathname, isPaymentLinksRoute])
+    [pathname]
+  )
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            {isPaymentLinksRoute ? (
-              <SidebarMenuButton
-                tooltip="Back to Dashboard"
-                render={<a href="/dashboard" />}
-                className="size-8 rounded-lg text-foreground hover:bg-muted transition-colors flex items-center justify-center p-0 cursor-pointer"
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
-              </SidebarMenuButton>
-            ) : (
-              <SidebarMenuButton
-                className="data-[slot=sidebar-menu-button]:p-1.5!"
-                render={<a href="/dashboard" />}
-              >
-                <img src="/pay-per-click.png" alt="XPay" className="size-8 rounded-lg object-cover" />
-                <span className="text-base font-semibold">XPay</span>
-              </SidebarMenuButton>
-            )}
+            <SidebarMenuButton size="lg" render={<a href="/dashboard" />}>
+              <div className="grid flex-1 text-start text-sm leading-tight">
+                <span className="truncate font-semibold">XPay</span>
+                <span className="truncate text-xs">Payment Platform</span>
+              </div>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain sections={sectionsWithActive} />
+        <NavMain items={itemsWithActive} />
+        {isAdmin && <NavSecondary items={data.navAdmin} className="mt-auto" />}
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

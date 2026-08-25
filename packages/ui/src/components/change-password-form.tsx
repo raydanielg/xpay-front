@@ -3,17 +3,23 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { toast } from "@workspace/ui/components/toast"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
+import { useOtp } from "@workspace/ui/hooks/use-otp"
 
 export function ChangePasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { changePassword, resetPassword } = useAuth()
+  const { pendingOtp, setPendingOtp } = useOtp()
   const [showPassword, setShowPassword] = React.useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
   const [password, setPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
   const [error, setError] = React.useState("")
   const [loading, setLoading] = React.useState(false)
+
+  const isResetMode = pendingOtp?.purpose === "forgot-password" && pendingOtp?.resetToken
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,9 +35,29 @@ export function ChangePasswordForm({
     }
     setError("")
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1500))
+
+    let result
+    if (isResetMode && pendingOtp?.resetToken) {
+      result = await resetPassword(pendingOtp.resetToken, password)
+    } else {
+      result = await changePassword(password, password)
+    }
+
     setLoading(false)
-    toast.add({ type: "success", title: "Password reset!", description: "Your password has been reset successfully. You can now sign in." })
+
+    if (result.success) {
+      setPendingOtp(null)
+      toast.add({
+        type: "success",
+        title: "Password reset!",
+        description: "Your password has been reset successfully. A confirmation SMS has been sent to your phone. You can now sign in.",
+      })
+      setTimeout(() => {
+        window.location.href = "/"
+      }, 800)
+    } else {
+      toast.add({ type: "error", title: "Failed", description: result.message })
+    }
   }
 
   const strength = React.useMemo(() => {
@@ -177,10 +203,12 @@ export function ChangePasswordForm({
           className="w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? (
-            <span className="flex items-center justify-center gap-1.5">
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-              <span className="size-2 animate-bounce rounded-full bg-current" />
+            <span className="flex items-center justify-center gap-2">
+              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              Resetting...
             </span>
           ) : (
             "Reset password"

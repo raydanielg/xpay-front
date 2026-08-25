@@ -53,7 +53,9 @@
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
     "./components/*": "./src/components/*.tsx",
-    "./hooks/*": "./src/hooks/*.ts",
+    "./hooks/*": "./src/hooks/*",
+    "./hooks/use-auth": "./src/hooks/use-auth.tsx",
+    "./hooks/use-otp": "./src/hooks/use-otp.tsx",
     "./app/*": "./src/app/*"
   }
 }

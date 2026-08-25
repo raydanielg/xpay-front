@@ -10,6 +10,7 @@ import { Badge } from "@workspace/ui/components/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -63,7 +64,7 @@ function NotificationIcon({ type }: { type: string }) {
       <HugeiconsIcon
         icon={CheckmarkCircle01Icon}
         strokeWidth={2}
-        className="size-4 text-green-500"
+        className="size-4 text-primary"
       />
     )
   if (type === "error")
@@ -71,14 +72,14 @@ function NotificationIcon({ type }: { type: string }) {
       <HugeiconsIcon
         icon={AlertCircleIcon}
         strokeWidth={2}
-        className="size-4 text-red-500"
+        className="size-4 text-destructive"
       />
     )
   return (
     <HugeiconsIcon
       icon={InformationSquareIcon}
       strokeWidth={2}
-      className="size-4 text-blue-500"
+      className="size-4 text-muted-foreground"
     />
   )
 }
@@ -164,10 +165,9 @@ export function SiteHeader() {
                 />
               }
             >
-              <HugeiconsIcon icon={Notification03Icon} strokeWidth={2} />
-              <span className="absolute right-1 top-1 flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+              <HugeiconsIcon icon={Notification03Icon} strokeWidth={2} className="size-5" />
+              <span className="absolute -top-0.5 -right-0.5 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-bold text-primary-foreground tabular-nums ring-2 ring-background shadow-sm">
+                {notifications.length}
               </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -175,12 +175,14 @@ export function SiteHeader() {
               className="w-80 p-0"
               sideOffset={8}
             >
-              <DropdownMenuLabel className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm font-semibold">Notifications</span>
-                <Badge variant="secondary" className="text-xs">
-                  {notifications.length} new
-                </Badge>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm font-semibold">Notifications</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {notifications.length} new
+                  </Badge>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <div className="max-h-[400px] overflow-y-auto">
                 {notifications.map((notif, index) => (

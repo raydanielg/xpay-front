@@ -13,9 +13,74 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@workspace/ui/components/badge"
 import { toast } from "@workspace/ui/components/toast"
+import { api } from "@workspace/ui/lib/api"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
+
+type AnalyticsData = {
+  payments: {
+    total: number
+    completed: number
+    pending: number
+    failed: number
+    totalAmount: number
+  }
+  payouts: {
+    total: number
+    completed: number
+    totalAmount: number
+  }
+  links: {
+    activePaymentLinks: number
+    activePaymentPages: number
+  }
+  recentPayments: Array<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    method: string
+    customerEmail: string | null
+    customerName: string | null
+    createdAt: string
+  }>
+  dailyBreakdown: Array<{ date: string; amount: number }>
+}
+
+function formatCurrency(amount: number, currency = "TSh") {
+  return `${currency} ${amount.toLocaleString()}`
+}
 
 export function OverviewMetrics() {
-  const [showBalance, setShowBalance] = React.useState(true)
+  const { user } = useAuth()
+  const [showBalance, setShowBalance] = React.useState(false)
+  const [data, setData] = React.useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = React.useState(true)
+
+  const firstName = user?.firstName || "there"
+  const greeting = `Welcome back, ${firstName}`
+
+  React.useEffect(() => {
+    let cancelled = false
+    async function fetchAnalytics() {
+      try {
+        const res = await api.get<AnalyticsData>("/analytics")
+        if (!cancelled && res.success && res.data) {
+          setData(res.data)
+        }
+      } catch {
+        // silent fail — dashboard shows zeros
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchAnalytics()
+    return () => { cancelled = true }
+  }, [])
+
+  const availableBalance = data ? data.payments.totalAmount - data.payouts.totalAmount : 0
+  const totalBalance = data ? data.payments.totalAmount : 0
+  const paymentsThisWeek = data ? data.payments.totalAmount : 0
+  const transactionCount = data ? data.payments.total : 0
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -28,9 +93,17 @@ export function OverviewMetrics() {
 
   return (
     <div className="space-y-4 px-4 pt-2 lg:px-6">
-      {/* Overview Title + Visibility Toggle */}
+      {/* Welcome Title + Visibility Toggle */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">Overview</h2>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">{greeting}</h2>
+            <span className="text-xl">👋</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Manage your payments, track transactions, and grow your business — all in one place. Enjoy using XPay today.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setShowBalance(!showBalance)}
@@ -54,7 +127,7 @@ export function OverviewMetrics() {
             <span>Available Balance</span>
             <button
               type="button"
-              onClick={() => copyToClipboard("2585", "Available Balance")}
+              onClick={() => copyToClipboard(String(availableBalance), "Available Balance")}
               className="opacity-60 transition-opacity hover:opacity-100 cursor-pointer"
               title="Copy balance"
             >
@@ -62,7 +135,13 @@ export function OverviewMetrics() {
             </button>
           </div>
           <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-            {showBalance ? "TSh 2,585" : "••••••••"}
+            {loading ? (
+              <div className="h-7 w-28 animate-pulse rounded bg-muted" />
+            ) : showBalance ? (
+              formatCurrency(availableBalance)
+            ) : (
+              "••••••••"
+            )}
           </div>
         </div>
 
@@ -72,7 +151,7 @@ export function OverviewMetrics() {
             <span>Total Balance</span>
             <button
               type="button"
-              onClick={() => copyToClipboard("2585", "Total Balance")}
+              onClick={() => copyToClipboard(String(totalBalance), "Total Balance")}
               className="opacity-60 transition-opacity hover:opacity-100 cursor-pointer"
               title="Copy balance"
             >
@@ -80,22 +159,34 @@ export function OverviewMetrics() {
             </button>
           </div>
           <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-            {showBalance ? "TSh 2,585" : "••••••••"}
+            {loading ? (
+              <div className="h-7 w-28 animate-pulse rounded bg-muted" />
+            ) : showBalance ? (
+              formatCurrency(totalBalance)
+            ) : (
+              "••••••••"
+            )}
           </div>
         </div>
 
         {/* Payments This Week */}
         <div className="group relative rounded-xl bg-muted/30 p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Payments This Week</span>
+            <span>Total Payments</span>
             <HugeiconsIcon icon={LockKeyIcon} strokeWidth={2} className="size-3.5 opacity-50" />
           </div>
           <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-            {showBalance ? "TSh 0" : "••••••••"}
+            {loading ? (
+              <div className="h-7 w-28 animate-pulse rounded bg-muted" />
+            ) : showBalance ? (
+              formatCurrency(paymentsThisWeek)
+            ) : (
+              "••••••••"
+            )}
           </div>
           <div className="mt-1 flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
             <HugeiconsIcon icon={ArrowDownRight01Icon} strokeWidth={2} className="size-3" />
-            <span>0.0% vs last week</span>
+            <span>{data ? data.payments.completed : 0} completed</span>
           </div>
         </div>
 
@@ -106,10 +197,16 @@ export function OverviewMetrics() {
             <HugeiconsIcon icon={LockKeyIcon} strokeWidth={2} className="size-3.5 opacity-50" />
           </div>
           <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-            {showBalance ? "0" : "••"}
+            {loading ? (
+              <div className="h-7 w-16 animate-pulse rounded bg-muted" />
+            ) : showBalance ? (
+              String(transactionCount)
+            ) : (
+              "••"
+            )}
           </div>
           <div className="mt-1 text-[0.6875rem] text-muted-foreground">
-            this week
+            {data ? `${data.payments.pending} pending` : "—"}
           </div>
         </div>
       </div>
@@ -117,14 +214,8 @@ export function OverviewMetrics() {
       {/* Feature Action Cards (Payment Pages & Content Delivery) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {/* Payment Pages */}
-        <div
-          onClick={() =>
-            toast.add({
-              type: "info",
-              title: "Payment Pages",
-              description: "Opening payment pages manager...",
-            })
-          }
+        <a
+          href="/dashboard/payment-pages"
           className="group relative flex cursor-pointer items-start justify-between rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/50"
         >
           <div className="space-y-1">
@@ -135,7 +226,7 @@ export function OverviewMetrics() {
               Payment Pages
             </h3>
             <p className="text-xs text-muted-foreground">
-              Create pages to sell products & services
+              {data ? `${data.links.activePaymentPages} active pages` : "Create pages to sell products & services"}
             </p>
           </div>
           <HugeiconsIcon
@@ -143,17 +234,11 @@ export function OverviewMetrics() {
             strokeWidth={2}
             className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
           />
-        </div>
+        </a>
 
-        {/* Content Delivery */}
-        <div
-          onClick={() =>
-            toast.add({
-              type: "info",
-              title: "Content Delivery",
-              description: "Opening content delivery manager...",
-            })
-          }
+        {/* Payment Links */}
+        <a
+          href="/dashboard/payment-links"
           className="group relative flex cursor-pointer items-start justify-between rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/50"
         >
           <div className="space-y-1">
@@ -161,10 +246,10 @@ export function OverviewMetrics() {
               DELIVER
             </Badge>
             <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-              Content Delivery
+              Payment Links
             </h3>
             <p className="text-xs text-muted-foreground">
-              Track digital product fulfillment
+              {data ? `${data.links.activePaymentLinks} active links` : "Create payment links for customers"}
             </p>
           </div>
           <HugeiconsIcon
@@ -172,7 +257,7 @@ export function OverviewMetrics() {
             strokeWidth={2}
             className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
           />
-        </div>
+        </a>
       </div>
     </div>
   )

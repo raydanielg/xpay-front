@@ -3,11 +3,15 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { toast } from "@workspace/ui/components/toast"
+import { useAuth } from "@workspace/ui/hooks/use-auth"
+import { useOtp } from "@workspace/ui/hooks/use-otp"
 
 export function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { forgotPassword } = useAuth()
+  const { setPendingOtp } = useOtp()
   const [email, setEmail] = React.useState("")
   const [sent, setSent] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
@@ -16,10 +20,15 @@ export function ForgotPasswordForm({
     e.preventDefault()
     if (!email) return
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1500))
+    const result = await forgotPassword(email)
     setLoading(false)
-    setSent(true)
-    toast.add({ type: "success", title: "Reset code sent!", description: `We've sent a reset code to ${email}.` })
+    if (result.success) {
+      setSent(true)
+      setPendingOtp({ email, purpose: "forgot-password", resetToken: result.resetToken })
+      toast.add({ type: "success", title: "Reset code sent!", description: `We've sent a reset code via SMS to your phone.` })
+    } else {
+      toast.add({ type: "error", title: "Failed to send", description: result.message })
+    }
   }
 
   return (
@@ -66,10 +75,12 @@ export function ForgotPasswordForm({
               className="w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-1.5">
-                  <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-                  <span className="size-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-                  <span className="size-2 animate-bounce rounded-full bg-current" />
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                  Sending...
                 </span>
               ) : (
                 "Send reset code"
@@ -99,11 +110,10 @@ export function ForgotPasswordForm({
               </svg>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
-              Check your email
+              Check your phone
             </h1>
             <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-              We&apos;ve sent a reset code to{" "}
-              <span className="font-medium text-gray-900 dark:text-gray-100">{email}</span>
+              We&apos;ve sent a reset code via SMS to your registered phone number
             </p>
           </div>
 
@@ -115,7 +125,7 @@ export function ForgotPasswordForm({
           </a>
 
           <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-            Didn&apos;t receive the email?{" "}
+            Didn&apos;t receive the SMS?{" "}
             <button
               type="button"
               onClick={() => setSent(false)}

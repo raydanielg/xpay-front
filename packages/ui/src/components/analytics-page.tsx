@@ -54,56 +54,39 @@ import {
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
 import { toast } from "@workspace/ui/components/toast"
+import { api } from "@workspace/ui/lib/api"
+
+interface AnalyticsData {
+  payments: {
+    total: number
+    completed: number
+    pending: number
+    failed: number
+    totalAmount: number
+  }
+  payouts: {
+    total: number
+    completed: number
+    totalAmount: number
+  }
+  links: {
+    activePaymentLinks: number
+    activePaymentPages: number
+  }
+  recentPayments: Array<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    method: string
+    customerEmail: string | null
+    customerName: string | null
+    createdAt: string
+  }>
+  dailyBreakdown: Array<{ date: string; amount: number }>
+}
 
 const timeRanges = ["Today", "7D", "30D", "90D", "All", "Custom"] as const
-
-// Daily transaction status data for the past 90 days
-const transactionsData = [
-  { date: "2026-05-25", completed: 12, failed: 3, pending: 1 },
-  { date: "2026-05-28", completed: 18, failed: 2, pending: 0 },
-  { date: "2026-06-01", completed: 25, failed: 4, pending: 2 },
-  { date: "2026-06-05", completed: 34, failed: 7, pending: 1 },
-  { date: "2026-06-10", completed: 28, failed: 5, pending: 0 },
-  { date: "2026-06-15", completed: 42, failed: 8, pending: 3 },
-  { date: "2026-06-20", completed: 38, failed: 6, pending: 2 },
-  { date: "2026-06-25", completed: 49, failed: 9, pending: 1 },
-  { date: "2026-06-30", completed: 55, failed: 12, pending: 4 },
-  { date: "2026-07-05", completed: 44, failed: 6, pending: 1 },
-  { date: "2026-07-10", completed: 62, failed: 14, pending: 3 },
-  { date: "2026-07-15", completed: 58, failed: 10, pending: 2 },
-  { date: "2026-07-20", completed: 71, failed: 15, pending: 5 },
-  { date: "2026-07-25", completed: 65, failed: 11, pending: 2 },
-  { date: "2026-07-30", completed: 83, failed: 16, pending: 4 },
-  { date: "2026-08-05", completed: 78, failed: 12, pending: 3 },
-  { date: "2026-08-10", completed: 92, failed: 18, pending: 5 },
-  { date: "2026-08-15", completed: 105, failed: 21, pending: 6 },
-  { date: "2026-08-20", completed: 118, failed: 24, pending: 7 },
-  { date: "2026-08-23", completed: 135, failed: 28, pending: 8 },
-]
-
-// Daily cashflow volume (TSh)
-const volumeData = [
-  { date: "2026-05-25", payments: 180000, payouts: 120000 },
-  { date: "2026-05-28", payments: 240000, payouts: 150000 },
-  { date: "2026-06-01", payments: 310000, payouts: 200000 },
-  { date: "2026-06-05", payments: 450000, payouts: 280000 },
-  { date: "2026-06-10", payments: 390000, payouts: 320000 },
-  { date: "2026-06-15", payments: 580000, payouts: 410000 },
-  { date: "2026-06-20", payments: 520000, payouts: 390000 },
-  { date: "2026-06-25", payments: 690000, payouts: 480000 },
-  { date: "2026-06-30", payments: 750000, payouts: 560000 },
-  { date: "2026-07-05", payments: 620000, payouts: 490000 },
-  { date: "2026-07-10", payments: 840000, payouts: 630000 },
-  { date: "2026-07-15", payments: 790000, payouts: 590000 },
-  { date: "2026-07-20", payments: 980000, payouts: 720000 },
-  { date: "2026-07-25", payments: 890000, payouts: 680000 },
-  { date: "2026-07-30", payments: 1120000, payouts: 840000 },
-  { date: "2026-08-05", payments: 1050000, payouts: 790000 },
-  { date: "2026-08-10", payments: 1260000, payouts: 930000 },
-  { date: "2026-08-15", payments: 1420000, payouts: 1050000 },
-  { date: "2026-08-20", payments: 1580000, payouts: 1180000 },
-  { date: "2026-08-23", payments: 1850000, payouts: 1350000 },
-]
 
 const txChartConfig = {
   transactions: {
@@ -138,7 +121,7 @@ const volumeChartConfig = {
 } satisfies ChartConfig
 
 const successRadialData = [
-  { name: "success", rate: 87.4, fill: "var(--color-success)" },
+  { name: "success", rate: 0, fill: "var(--color-success)" },
 ]
 
 const successRadialConfig = {
@@ -152,7 +135,7 @@ const successRadialConfig = {
 } satisfies ChartConfig
 
 const settlementRadialData = [
-  { name: "settled", rate: 94.2, fill: "var(--color-settled)" },
+  { name: "settled", rate: 0, fill: "var(--color-settled)" },
 ]
 
 const settlementRadialConfig = {
@@ -166,7 +149,7 @@ const settlementRadialConfig = {
 } satisfies ChartConfig
 
 const mobileShareData = [
-  { name: "mobile", rate: 76.5, fill: "var(--color-mobile)" },
+  { name: "mobile", rate: 0, fill: "var(--color-mobile)" },
 ]
 
 const mobileShareConfig = {
@@ -184,47 +167,102 @@ export function AnalyticsPage() {
   const [txTimeRange, setTxTimeRange] = React.useState("90d")
   const [volTimeRange, setVolTimeRange] = React.useState("90d")
   const [loading, setLoading] = React.useState(true)
+  const [analytics, setAnalytics] = React.useState<AnalyticsData | null>(null)
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    async function fetchAnalytics() {
+      setLoading(true)
+      try {
+        const res = await api.get<AnalyticsData>("/analytics")
+        if (!cancelled && res.success && res.data) {
+          setAnalytics(res.data)
+        }
+      } catch {
+        // silent fail
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchAnalytics()
+    return () => { cancelled = true }
   }, [])
+
+  const successRate = analytics
+    ? analytics.payments.total > 0
+      ? ((analytics.payments.completed / analytics.payments.total) * 100).toFixed(1)
+      : "0"
+    : "0"
+
+  const settlementRate = analytics
+    ? analytics.payouts.total > 0
+      ? (analytics.payouts.completed / analytics.payouts.total) * 100
+      : 0
+    : 0
+
+  const mobileShare = React.useMemo(() => {
+    if (!analytics?.recentPayments || analytics.recentPayments.length === 0) return 0
+    const mobileCount = analytics.recentPayments.filter((p) => p.method?.toLowerCase() === "mobile").length
+    return (mobileCount / analytics.recentPayments.length) * 100
+  }, [analytics])
 
   const overviewStats = [
     {
       label: "Payments",
-      value: "TSh 775,000",
-      sub: "37 transactions",
+      value: `TSh ${(analytics?.payments.totalAmount || 0).toLocaleString()}`,
+      sub: `${analytics?.payments.total || 0} transactions`,
       icon: ReceiptIcon,
     },
     {
       label: "Payouts",
-      value: "TSh 759,000",
-      sub: "6 transactions",
+      value: `TSh ${(analytics?.payouts.totalAmount || 0).toLocaleString()}`,
+      sub: `${analytics?.payouts.total || 0} transactions`,
       icon: SentIcon,
     },
     {
       label: "Successful",
-      value: "37",
-      sub: "TSh 775,000",
+      value: `${analytics?.payments.completed || 0}`,
+      sub: `TSh ${(analytics?.payments.totalAmount || 0).toLocaleString()}`,
       icon: CheckmarkCircle01Icon,
     },
     {
       label: "Pending",
-      value: "0",
-      sub: "TSh 0",
+      value: `${analytics?.payments.pending || 0}`,
+      sub: `TSh 0`,
       icon: Clock01Icon,
     },
     {
       label: "Success Rate",
-      value: "25.3%",
-      sub: "109 failed",
+      value: `${successRate}%`,
+      sub: `${analytics?.payments.failed || 0} failed`,
       icon: PieChartIcon,
     },
   ]
 
+  // Build transaction chart data from dailyBreakdown
+  const transactionsData = React.useMemo(() => {
+    if (!analytics?.dailyBreakdown) return []
+    return analytics.dailyBreakdown.map((d) => ({
+      date: d.date,
+      completed: 1,
+      failed: 0,
+      pending: 0,
+      amount: d.amount,
+    }))
+  }, [analytics])
+
+  // Build volume chart data from dailyBreakdown
+  const volumeData = React.useMemo(() => {
+    if (!analytics?.dailyBreakdown) return []
+    return analytics.dailyBreakdown.map((d) => ({
+      date: d.date,
+      payments: d.amount,
+      payouts: 0,
+    }))
+  }, [analytics])
+
   const filteredTxData = React.useMemo(() => {
-    const referenceDate = new Date("2026-08-23")
+    const referenceDate = new Date()
     let daysToSubtract = 90
     if (txTimeRange === "30d") daysToSubtract = 30
     if (txTimeRange === "7d") daysToSubtract = 7
@@ -232,10 +270,10 @@ export function AnalyticsPage() {
     const startDate = new Date(referenceDate)
     startDate.setDate(startDate.getDate() - daysToSubtract)
     return transactionsData.filter((item) => new Date(item.date) >= startDate)
-  }, [txTimeRange])
+  }, [txTimeRange, transactionsData])
 
   const filteredVolData = React.useMemo(() => {
-    const referenceDate = new Date("2026-08-23")
+    const referenceDate = new Date()
     let daysToSubtract = 90
     if (volTimeRange === "30d") daysToSubtract = 30
     if (volTimeRange === "7d") daysToSubtract = 7
@@ -243,7 +281,7 @@ export function AnalyticsPage() {
     const startDate = new Date(referenceDate)
     startDate.setDate(startDate.getDate() - daysToSubtract)
     return volumeData.filter((item) => new Date(item.date) >= startDate)
-  }, [volTimeRange])
+  }, [volTimeRange, volumeData])
 
   return (
     <div className="relative space-y-6 px-4 py-6 lg:px-6">
@@ -619,9 +657,9 @@ export function AnalyticsPage() {
                 className="mx-auto aspect-square max-h-[220px]"
               >
                 <RadialBarChart
-                  data={successRadialData}
+                  data={[{ name: "success", rate: Number(successRate), fill: "var(--color-success)" }]}
                   startAngle={90}
-                  endAngle={90 + (360 * 87.4) / 100}
+                  endAngle={90 + (360 * Number(successRate)) / 100}
                   innerRadius={65}
                   outerRadius={95}
                 >
@@ -649,7 +687,7 @@ export function AnalyticsPage() {
                                 y={viewBox.cy}
                                 className="fill-foreground text-3xl font-bold"
                               >
-                                87.4%
+                                {successRate}%
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
@@ -692,9 +730,9 @@ export function AnalyticsPage() {
                 className="mx-auto aspect-square max-h-[220px]"
               >
                 <RadialBarChart
-                  data={settlementRadialData}
+                  data={[{ name: "settled", rate: settlementRate, fill: "var(--color-settled)" }]}
                   startAngle={90}
-                  endAngle={90 + (360 * 94.2) / 100}
+                  endAngle={90 + (360 * settlementRate) / 100}
                   innerRadius={65}
                   outerRadius={95}
                 >
@@ -722,7 +760,7 @@ export function AnalyticsPage() {
                                 y={viewBox.cy}
                                 className="fill-foreground text-3xl font-bold"
                               >
-                                94.2%
+                                {settlementRate.toFixed(1)}%
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
@@ -765,9 +803,9 @@ export function AnalyticsPage() {
                 className="mx-auto aspect-square max-h-[220px]"
               >
                 <RadialBarChart
-                  data={mobileShareData}
+                  data={[{ name: "mobile", rate: mobileShare, fill: "var(--color-mobile)" }]}
                   startAngle={90}
-                  endAngle={90 + (360 * 76.5) / 100}
+                  endAngle={90 + (360 * mobileShare) / 100}
                   innerRadius={65}
                   outerRadius={95}
                 >
@@ -795,7 +833,7 @@ export function AnalyticsPage() {
                                 y={viewBox.cy}
                                 className="fill-foreground text-3xl font-bold"
                               >
-                                76.5%
+                                {mobileShare.toFixed(1)}%
                               </tspan>
                               <tspan
                                 x={viewBox.cx}

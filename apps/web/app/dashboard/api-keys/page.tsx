@@ -5,8 +5,8 @@ import {
   SiteHeader,
 } from "@workspace/ui/components/site-header"
 import {
-  SettingsPage,
-} from "@workspace/ui/components/settings-page"
+  DeveloperPage,
+} from "@workspace/ui/components/dashboard-pages"
 import {
   SidebarInset,
   SidebarProvider,
@@ -20,7 +20,7 @@ export default function ApiKeysPage() {
         <SidebarInset>
           <SiteHeader />
           <main className="flex flex-1 flex-col">
-            <SettingsPage defaultTab="api-keys" />
+            <DeveloperPage />
           </main>
         </SidebarInset>
       </SidebarProvider>

@@ -5,6 +5,8 @@ import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@workspace/ui/components/toast"
 import { cn } from "@workspace/ui/lib/utils";
+import { AuthProvider } from "@workspace/ui/hooks/use-auth"
+import { OtpProvider } from "@workspace/ui/hooks/use-otp"
 
 export const metadata: Metadata = {
   title: "XPay",
@@ -38,8 +40,12 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <AuthProvider>
+            <OtpProvider>
+              {children}
+              <Toaster />
+            </OtpProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

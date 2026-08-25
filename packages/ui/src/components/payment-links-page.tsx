@@ -16,6 +16,7 @@ import {
   Calendar03Icon,
   RefreshIcon,
   Sorting01Icon,
+  Link03Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Popover,
@@ -34,12 +35,44 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Checkbox } from "@workspace/ui/components/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import { toast } from "@workspace/ui/components/toast"
 import {
   type PaymentLinkRecord,
-  mockPaymentRecords,
   profileSlug,
 } from "../data/mock-payment-links"
+import { api } from "@workspace/ui/lib/api"
+
+interface ApiPaymentLink {
+  id: string
+  name: string
+  amount: number
+  currency: string
+  description: string | null
+  isActive: boolean
+  url: string
+  createdAt: string
+}
+
+interface ApiPaymentPage {
+  id: string
+  name: string
+  slug: string
+  displayName: string | null
+  isActive: boolean
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+    ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+}
 
 const statusOptions = [
   { label: "All statuses", value: "ALL" },
@@ -73,7 +106,7 @@ function StatusBadge({ status }: { status: PaymentLinkRecord["status"] }) {
 }
 
 export function PaymentLinksPage() {
-  const [records, setRecords] = React.useState<PaymentLinkRecord[]>(mockPaymentRecords)
+  const [records, setRecords] = React.useState<PaymentLinkRecord[]>([])
   const [search, setSearch] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL")
   const [selected, setSelected] = React.useState<string[]>([])
@@ -104,16 +137,70 @@ export function PaymentLinksPage() {
   )
 
   // Drawer form fields
-  const [merchantProfile, setMerchantProfile] = React.useState("Default")
-  const [currency, setCurrency] = React.useState("TZS (Tanzanian Shilling)")
-  const [amount, setAmount] = React.useState("0")
+  const [merchantProfile, setMerchantProfile] = React.useState("")
+  const [currency, setCurrency] = React.useState("TZS")
+  const [amount, setAmount] = React.useState("")
   const [letCustomerChoose, setLetCustomerChoose] = React.useState(false)
   const [description, setDescription] = React.useState("")
   const [expiryDuration, setExpiryDuration] = React.useState("1 hour")
 
+  // Real merchant profiles from API
+  const [profiles, setProfiles] = React.useState<ApiPaymentPage[]>([])
+  const [profilesLoading, setProfilesLoading] = React.useState(true)
+
   React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    async function fetchProfiles() {
+      try {
+        const res = await api.get<ApiPaymentPage[]>("/payment-pages")
+        if (!cancelled && res.success && res.data) {
+ const pages = Array.isArray(res.data) ? res.data : []
+          setProfiles(pages)
+          if (pages.length > 0 && pages[0] && !merchantProfile) {
+            setMerchantProfile(pages[0].name)
+          }
+        }
+      } catch {
+        // silent
+      } finally {
+        if (!cancelled) setProfilesLoading(false)
+      }
+    }
+    fetchProfiles()
+    return () => { cancelled = true }
+  }, [])
+
+  // Fetch payment links from API
+  React.useEffect(() => {
+    let cancelled = false
+    async function fetchLinks() {
+      setLoading(true)
+      try {
+        const res = await api.get<ApiPaymentLink[]>("/payment-links")
+        if (!cancelled && res.success && res.data) {
+          const links = Array.isArray(res.data) ? res.data : []
+          const mapped: PaymentLinkRecord[] = links.map((link) => ({
+            id: link.id,
+            reference: link.url.length > 10 ? link.url.slice(0, 8) + "..." : link.url,
+            fullReference: link.url,
+            merchantProfile: link.name,
+            amount: link.isActive ? `${link.currency || "TZS"} ${link.amount.toLocaleString()}` : "Inactive",
+            customer: link.description || "-",
+            status: link.isActive ? "unpaid" : "expired",
+            description: link.description || undefined,
+            createdAt: formatDate(link.createdAt),
+            link: link.url,
+          }))
+          setRecords(mapped)
+        }
+      } catch {
+        // silent fail
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchLinks()
+    return () => { cancelled = true }
   }, [])
 
   // Auto-refresh timer polling
@@ -211,43 +298,70 @@ export function PaymentLinksPage() {
     })
   }
 
-  function handleCreateLink(e: React.FormEvent) {
+  async function handleCreateLink(e: React.FormEvent) {
     e.preventDefault()
+    if (!merchantProfile) {
+      toast.add({ type: "error", title: "Select a profile", description: "Please choose a merchant profile." })
+      return
+    }
     setIsSubmitting(true)
 
-    setTimeout(() => {
-      const randNum = Math.floor(100000000 + Math.random() * 900000000)
-      const formattedAmount = letCustomerChoose
-        ? "Custom Amount"
-        : `TSh ${Number(amount || 0).toLocaleString()}`
-
-      const newRecord: PaymentLinkRecord = {
-        id: String(Date.now()),
-        reference: `PAY${String(randNum).substring(0, 9)}...`,
-        fullReference: `PAY${randNum}${Date.now().toString().substring(8)}`,
-        merchantProfile: merchantProfile === "Default" ? "XPay" : merchantProfile,
-        amount: formattedAmount,
-        customer: description.trim() || "-",
-        status: "unpaid",
-        createdAt: "Today, just now",
-      }
-
-      setRecords([newRecord, ...records])
-      setIsSubmitting(false)
-      setDrawerOpen(false)
-
-      // Reset form
-      setAmount("0")
-      setDescription("")
-      setLetCustomerChoose(false)
-      setExpiryDuration("1 hour")
-
-      toast.add({
-        type: "success",
-        title: "Payment Link Created",
-        description: `Reference ${newRecord.reference} generated successfully.`,
+    try {
+      const linkAmount = letCustomerChoose ? 0 : Number(amount || 0)
+      const res = await api.post<ApiPaymentLink>("/payment-links", {
+        name: merchantProfile,
+        amount: linkAmount,
+        currency,
+        description: description.trim() || undefined,
+        isActive: true,
       })
-    }, 1200)
+
+      if (res.success && res.data) {
+        const link = res.data
+        const newRecord: PaymentLinkRecord = {
+          id: link.id,
+          reference: link.url.length > 10 ? link.url.slice(0, 8) + "..." : link.url,
+          fullReference: link.url,
+          merchantProfile: link.name,
+          amount: `${link.currency || "TZS"} ${link.amount.toLocaleString()}`,
+          customer: link.description || "-",
+          status: "unpaid",
+          description: link.description || undefined,
+          createdAt: formatDate(link.createdAt),
+          link: link.url,
+        }
+
+        setRecords([newRecord, ...records])
+        setDrawerOpen(false)
+
+        setAmount("")
+        setDescription("")
+        setLetCustomerChoose(false)
+        setExpiryDuration("1 hour")
+        setCurrency("TZS")
+        if (profiles.length > 0 && profiles[0]) setMerchantProfile(profiles[0].name)
+
+        toast.add({
+          type: "success",
+          title: "Payment Link Created",
+          description: `Link for ${newRecord.merchantProfile} generated successfully.`,
+        })
+      } else {
+        toast.add({
+          type: "error",
+          title: "Failed to create link",
+          description: res.message || "Please try again.",
+        })
+      }
+    } catch {
+      toast.add({
+        type: "error",
+        title: "Network error",
+        description: "Please try again.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -407,7 +521,7 @@ export function PaymentLinksPage() {
       {/* Table */}
       <div className="overflow-x-auto rounded-xl bg-muted/20">
         <table className="w-full text-left text-xs">
-          <thead className="border-b bg-muted/40 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          <thead className="border-b border-border/60 bg-muted/30 text-muted-foreground font-semibold">
             <tr>
               <th className="w-10 px-4 py-3">
                 <Checkbox
@@ -417,12 +531,12 @@ export function PaymentLinksPage() {
                   aria-label="Select all"
                 />
               </th>
-              <th className="px-4 py-3">REFERENCE</th>
-              <th className="px-4 py-3">MERCHANT PROFILE</th>
-              <th className="px-4 py-3">AMOUNT</th>
-              <th className="px-4 py-3">CUSTOMER</th>
-              <th className="px-4 py-3">STATUS</th>
-              <th className="px-4 py-3">CREATED</th>
+              <th className="px-4 py-3 font-medium">Reference</th>
+              <th className="px-4 py-3 font-medium">Merchant Profile</th>
+              <th className="px-4 py-3 font-medium">Amount</th>
+              <th className="px-4 py-3 font-medium">Customer</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Created</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -440,8 +554,16 @@ export function PaymentLinksPage() {
               ))
             ) : paginatedRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center">
-                  <p className="text-sm text-muted-foreground">No payment links found</p>
+                <td colSpan={7} className="px-4 py-16">
+                  <div className="flex flex-col items-center justify-center gap-3 text-center">
+                    <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50">
+                      <HugeiconsIcon icon={Link03Icon} strokeWidth={1.5} className="size-7 text-muted-foreground/60" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">No payment links found</p>
+                      <p className="text-xs text-muted-foreground">Create a payment link to start collecting money from customers.</p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -899,64 +1021,66 @@ export function PaymentLinksPage() {
             className="flex-1 overflow-y-auto p-6 space-y-5"
           >
             {/* Merchant Profile */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-foreground">Merchant profile</label>
-              <div className="space-y-1">
-                <select
-                  value={merchantProfile}
-                  onChange={(e) => setMerchantProfile(e.target.value)}
-                  className="h-9 w-full rounded-lg bg-muted/30 px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted/50 cursor-pointer"
-                >
-                  <option value="Default" className="bg-popover text-popover-foreground">
-                    Default
-                  </option>
-                  <option value="SalamaPay" className="bg-popover text-popover-foreground">
-                    SalamaPay
-                  </option>
-                  <option value="XPay Store" className="bg-popover text-popover-foreground">
-                    XPay Store
-                  </option>
-                </select>
-                <p className="text-[0.6875rem] text-muted-foreground">
-                  Choose a profile for branding, redirect URLs, and payment methods.
-                </p>
-              </div>
+              {profilesLoading ? (
+                <div className="h-10 rounded-lg bg-muted/30 animate-pulse" />
+              ) : profiles.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/70 p-3 text-center text-[0.6875rem] text-muted-foreground">
+                  No profiles found. Create a payment page first.
+                </div>
+              ) : (
+                <Select value={merchantProfile} onValueChange={(v) => v && setMerchantProfile(v)}>
+                  <SelectTrigger className="w-full h-10 text-xs bg-card border-border/80 rounded-lg">
+                    <SelectValue placeholder="Select a profile" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.name}>
+                        {p.displayName || p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-[0.6875rem] text-muted-foreground">
+                Choose a profile for branding, redirect URLs, and payment methods.
+              </p>
             </div>
 
             {/* Currency & Amount */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-foreground">Amount</label>
               <div className="space-y-2">
                 {/* Currency selector */}
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="h-9 w-full rounded-lg bg-muted/30 px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted/50 cursor-pointer"
-                >
-                  <option value="TZS (Tanzanian Shilling)" className="bg-popover text-popover-foreground">
-                    TZS (Tanzanian Shilling)
-                  </option>
-                  <option value="USD (US Dollar)" className="bg-popover text-popover-foreground">
-                    USD (US Dollar)
-                  </option>
-                  <option value="KES (Kenyan Shilling)" className="bg-popover text-popover-foreground">
-                    KES (Kenyan Shilling)
-                  </option>
-                  <option value="UGX (Ugandan Shilling)" className="bg-popover text-popover-foreground">
-                    UGX (Ugandan Shilling)
-                  </option>
-                </select>
+                <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
+                  <SelectTrigger className="w-full h-10 text-xs bg-card border-border/80 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TZS">TZS (Tanzanian Shilling)</SelectItem>
+                    <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                    <SelectItem value="KES">KES (Kenyan Shilling)</SelectItem>
+                    <SelectItem value="UGX">UGX (Ugandan Shilling)</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 {/* Amount input */}
                 {!letCustomerChoose && (
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required={!letCustomerChoose}
-                    className="h-9 text-xs bg-muted/20 border-0 focus-visible:ring-1"
-                  />
+                  <div className="flex items-center rounded-lg border border-border/80 bg-card overflow-hidden focus-within:ring-1 focus-within:ring-primary">
+                    <div className="flex items-center gap-1 border-r border-border/80 bg-muted/25 px-3 py-2.5 text-xs font-medium text-foreground shrink-0">
+                      <span>{currency}</span>
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      required={!letCustomerChoose}
+                      min="0"
+                      className="flex-1 border-0 bg-transparent px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    />
+                  </div>
                 )}
 
                 <p className="text-[0.6875rem] text-muted-foreground">
@@ -966,68 +1090,49 @@ export function PaymentLinksPage() {
             </div>
 
             {/* Let customer choose how much to pay */}
-            <div className="pt-1">
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={letCustomerChoose}
-                  onChange={(e) => setLetCustomerChoose(e.target.checked)}
-                  className="size-4 rounded accent-primary cursor-pointer"
-                />
-                <span className="text-xs font-medium text-foreground">
-                  Let customer choose how much to pay
-                </span>
-              </label>
+            <div className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+              <Checkbox
+                checked={letCustomerChoose}
+                onCheckedChange={(checked) => setLetCustomerChoose(checked === true)}
+              />
+              <span className="text-xs font-medium text-foreground">
+                Let customer choose how much to pay
+              </span>
             </div>
 
             {/* Payment Description */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-foreground">Description</label>
-              <div className="space-y-1">
-                <Input
-                  placeholder="Payment for..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="h-9 text-xs bg-muted/20 border-0 focus-visible:ring-1"
-                />
-                <p className="text-[0.6875rem] text-muted-foreground">
-                  Shown to the customer on the checkout page.
-                </p>
-              </div>
+              <Input
+                placeholder="Payment for..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="h-10 text-xs bg-card border-border/80 rounded-lg focus-visible:ring-1"
+              />
+              <p className="text-[0.6875rem] text-muted-foreground">
+                Shown to the customer on the checkout page.
+              </p>
             </div>
 
             {/* Expiry Duration */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-foreground">Expiry</label>
-              <div className="space-y-1">
-                <select
-                  value={expiryDuration}
-                  onChange={(e) => setExpiryDuration(e.target.value)}
-                  className="h-9 w-full rounded-lg bg-muted/30 px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted/50 cursor-pointer"
-                >
-                  <option value="1 hour" className="bg-popover text-popover-foreground">
-                    1 hour
-                  </option>
-                  <option value="6 hours" className="bg-popover text-popover-foreground">
-                    6 hours
-                  </option>
-                  <option value="24 hours" className="bg-popover text-popover-foreground">
-                    24 hours
-                  </option>
-                  <option value="7 days" className="bg-popover text-popover-foreground">
-                    7 days
-                  </option>
-                  <option value="30 days" className="bg-popover text-popover-foreground">
-                    30 days
-                  </option>
-                  <option value="Never" className="bg-popover text-popover-foreground">
-                    Never
-                  </option>
-                </select>
-                <p className="text-[0.6875rem] text-muted-foreground">
-                  Link will automatically deactivate after this duration.
-                </p>
-              </div>
+              <Select value={expiryDuration} onValueChange={(v) => v && setExpiryDuration(v)}>
+                <SelectTrigger className="w-full h-10 text-xs bg-card border-border/80 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1 hour">1 hour</SelectItem>
+                  <SelectItem value="6 hours">6 hours</SelectItem>
+                  <SelectItem value="24 hours">24 hours</SelectItem>
+                  <SelectItem value="7 days">7 days</SelectItem>
+                  <SelectItem value="30 days">30 days</SelectItem>
+                  <SelectItem value="Never">Never</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[0.6875rem] text-muted-foreground">
+                Link will automatically deactivate after this duration.
+              </p>
             </div>
           </form>
 
